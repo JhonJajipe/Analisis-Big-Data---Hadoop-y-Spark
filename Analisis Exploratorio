@@ -1,0 +1,38 @@
+#Importamos librerias necesarias
+from pyspark.sql import SparkSession, functions as F
+
+# Inicializa la sesión de Spark
+spark = SparkSession.builder.appName('Tarea3').getOrCreate()
+
+# Define la ruta del archivo .csv en HDFS
+file_path = 'hdfs://localhost:9000/Tarea3/rows.csv.4'
+
+# Lectura de archivo .csv
+df = spark.read.format('csv').option('header','true').option('inferSchema','true').load(file_path)
+
+#imprimimos el esquema
+print("Estructura del dataset\n")
+df.printSchema()
+
+print("Cantidad de registros en el dataset\n")
+num_r = df.count()
+
+# Mostrar el resultado
+print(f"El número total de registros es: {num_r}")
+
+# Muestre cuantos prestadores de salud del pais existen ademas de que tipo de servicio
+# prestan
+print("Numero de prestadores de salud\n")
+df.groupBy("ClasePrestadorDesc").count().orderBy("count", ascending=False).show()
+
+# Muestra cuantos prestadores de servicio de salud hay en cada departamento del pais
+print("Numero de prestadores de salud por departamento\n")
+df.groupBy("DepartamentoPrestadorDesc").count().orderBy("count", ascending=False).show(50)
+
+# Ademas de que tipo de servicio ofrecen en cada departamento
+print("Que tipos de servicio ofrecen en cada departamento\n")
+df.groupBy("DepartamentoPrestadorDesc", "ClasePrestadorDesc").count().orderBy("count", ascending=False).show(60)
+
+# Estadisticas básicas
+print("Estadisticas basicas")
+df.summary().show()
