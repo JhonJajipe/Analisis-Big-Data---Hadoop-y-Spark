@@ -1,0 +1,56 @@
+#Importacion de librerias
+from pyspark.sql.functions import col, mean, stddev, min, max, expr, countDistinct
+from pyspark.sql import SparkSession, functions as F
+import pandas as pd
+import matplotlib.pyplot as plt
+from pyspark.sql.functions import col
+
+# Inicializa la sesión de Spark
+spark = SparkSession.builder.appName('Tarea3').getOrCreate()
+
+# Define la ruta del archivo .csv en HDFS
+file_path = 'hdfs://localhost:9000/Tarea3/rows.csv.4'
+
+# Lee el archivo .csv
+df = spark.read.format('csv').option('header','true').option('inferSchema', 'true').load(file_path)
+
+# Creacion de columna para conteo
+df_grouped = df.groupBy("DepartamentoSedeDesc").count()
+
+# Nuevo nombre columna conteo
+df_grouped = df_grouped.withColumnRenamed("count", "Numero_Prestadores")
+
+# Ordenamiento
+df_sorted = df_grouped.orderBy(col("count").desc())
+
+# Convertir a un DataFrame de pandas
+data_for_plot = df_grouped.toPandas()
+
+# Creacion  gráfico de barras
+plt.figure(figsize=(12, 8))
+plt.barh(data_for_plot["DepartamentoSedeDesc"], data_for_plot["Numero_Prestadores"], color='skyblue')
+plt.xlabel("Número de Prestadores de Salud")
+plt.title("Número de Prestadores de Salud por Departamento en Colombia")
+plt.grid(axis='x', linestyle='--', alpha=0.7)
+
+# Guardar el gráfico en un archivo
+plt.savefig('grafico_1.png')
+
+# Agrupar por departamento y contar el número de prestadores
+df_grouped = df.groupBy("DepartamentoSedeDesc").count().withColumnRenamed("count", "Numero_Prestadores")
+
+# Calcular las estadísticas
+stats = df_grouped.select(
+    countDistinct("DepartamentoSedeDesc").alias("Cantidad de departamentos"),
+    mean("Numero_Prestadores").alias("Media"),
+    expr('percentile_approx(Numero_Prestadores, 0.5)').alias("Mediana"),
+    stddev("Numero_Prestadores").alias("Desviación estándar"),
+    min("Numero_Prestadores").alias("Mínimo"),
+    max("Numero_Prestadores").alias("Máximo"),
+    expr('percentile_approx(Numero_Prestadores, 0.25)').alias("Percentil 25"),
+    expr('percentile_approx(Numero_Prestadores, 0.75)').alias("Percentil 75")
+)
+
+# Mostrar los resultados
+stats_pd = stats.toPandas()
+print(stats_pd)
